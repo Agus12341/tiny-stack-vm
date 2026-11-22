@@ -1,8 +1,3 @@
-// A tiny stack VM for make.fun's tiny stack ISA (version 1), written from the ISA spec in the kit
-// (generator/subject/ISA.md). One run answers every instance of a set: it runs each <id>/program.bin
-// on <id>/input.bin and writes <id>/stdout.bin and <id>/exit.txt (a halt's 0, an EXIT's low byte, or
-// a trap's code). A step's checks run in the ISA's order: step limit, pc in bounds, known opcode,
-// immediate fits, stack needs, own traps, effect.
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -30,13 +25,13 @@ function run(P, inp) {
     const next = pc + 1 + im;
     pc = next;
     switch (op) {
-      case 0: // HALT
+      case 0:
         return fin(0);
-      case 1: // PUSH8, sign-extended
+      case 1:
         if (sp === 256) return fin(3);
         S[sp++] = (P[next - 1] << 24) >> 24;
         break;
-      case 2: // PUSH32, little-endian
+      case 2:
         if (sp === 256) return fin(3);
         S[sp++] = P[next - 4] | (P[next - 3] << 8) | (P[next - 2] << 16) | (P[next - 1] << 24);
         break;
@@ -63,7 +58,7 @@ function run(P, inp) {
         S[sp] = S[sp - 2];
         sp++;
         break;
-      case 7: { // ROT: ( a b c -- b c a )
+      case 7: {
         if (sp < 3) return fin(2);
         const a = S[sp - 3];
         S[sp - 3] = S[sp - 2];
@@ -81,7 +76,7 @@ function run(P, inp) {
         break;
       case 16: case 17: case 18: case 19: case 20: case 21: case 22:
       case 24: case 25: case 26: case 28: case 29: case 30:
-      case 32: case 33: case 34: { // binary ops
+      case 32: case 33: case 34: {
         if (sp < 2) return fin(2);
         const b = S[sp - 1];
         const a = S[sp - 2];
@@ -89,16 +84,16 @@ function run(P, inp) {
         if (op === 16) r = a + b;
         else if (op === 17) r = a - b;
         else if (op === 18) r = Math.imul(a, b);
-        else if (op === 19) { // DIV, truncating
+        else if (op === 19) {
           if (b === 0) return fin(4);
           r = a === -2147483648 && b === -1 ? a : (a / b) | 0;
-        } else if (op === 20) { // MOD, sign of a
+        } else if (op === 20) {
           if (b === 0) return fin(4);
           r = b === -1 ? 0 : (a % b) | 0;
-        } else if (op === 21) { // DIVU, unsigned
+        } else if (op === 21) {
           if (b === 0) return fin(4);
           r = Math.floor((a >>> 0) / (b >>> 0)) | 0;
-        } else if (op === 22) { // MODU
+        } else if (op === 22) {
           if (b === 0) return fin(4);
           r = ((a >>> 0) % (b >>> 0)) | 0;
         } else if (op === 24) r = a & b;
@@ -109,12 +104,12 @@ function run(P, inp) {
         else if (op === 30) r = (a >>> (b & 31)) | 0;
         else if (op === 32) r = a === b ? 1 : 0;
         else if (op === 33) r = a < b ? 1 : 0;
-        else r = (a >>> 0) < (b >>> 0) ? 1 : 0; // LTU
+        else r = (a >>> 0) < (b >>> 0) ? 1 : 0;
         S[sp - 2] = r;
         sp--;
         break;
       }
-      case 48: case 49: case 50: { // JMP, JZ, JNZ: signed offset from the next instruction
+      case 48: case 49: case 50: {
         const rel = ((P[next - 2] | (P[next - 1] << 8)) << 16) >> 16;
         let take = op === 48;
         if (op !== 48) {
@@ -125,7 +120,7 @@ function run(P, inp) {
         if (take) pc = next + rel;
         break;
       }
-      case 51: // CALL: unsigned absolute target
+      case 51:
         if (cs === 64) return fin(7);
         C[cs++] = next;
         pc = P[next - 2] | (P[next - 1] << 8);
@@ -162,7 +157,7 @@ function run(P, inp) {
         if (ol === 65536) return fin(11);
         out[ol++] = S[--sp] & 255;
         break;
-      case 82: // IN: next input byte, -1 past the end
+      case 82:
         if (sp === 256) return fin(3);
         S[sp++] = ip < il ? inp[ip++] : -1;
         break;
